@@ -1,61 +1,18 @@
----
-title: "Differential expression analysis"
-author: "Marco Tello"
-date: "2024-02-14"
-output: github_document
----
+Differential expression analysis
+================
+Marco Tello
+2024-02-14
 
-```{r setup, include=FALSE}
-# Differential expression tools
-library(DESeq2)
-# Data format and ID conversion
-library(data.table)
-library(biomaRt)
-library(stringr)
-# Plot generation 
-library(ggplot2)
-library(factoextra)
-library(pheatmap)
-
-theme_set(theme_bw())
-```
-
-
-```{r custom functions, include=FALSE}
-# Custom heatmap function
-custom_volcano <- function(DEG_results, alpha, log2FC){
-  temp <- data.table(na.omit(DEG_results))
-  temp[, alpha := ifelse(padj <= alpha, TRUE, FALSE)]
-  temp[, log2FC := ifelse(abs(log2FoldChange) >= log2FC, TRUE, FALSE)]
-  temp[, DEG := "No"]
-  temp[, DEG := ifelse(alpha & !log2FC, "FDR", DEG)]
-  temp[, DEG := ifelse(alpha & log2FC, "FDR and FC", DEG)]
-  ggplot(temp, aes(x = log2FoldChange, y = -log10(padj), color = DEG)) +
-    geom_hline(yintercept = -log10(alpha), linetype = "dashed", color = "gray") +
-    geom_vline(xintercept = log2FC, linetype = "dashed", color = "gray") +
-    geom_vline(xintercept = -log2FC, linetype = "dashed", color = "gray") +
-    geom_point(alpha = 0.4, size = 3) +
-    # xlim(-6, 3)+
-    scale_color_manual(values = c("No" = "darkgray", "FDR" = "blue", "FDR and FC" = "red")) +
-    labs(x = "log2( fold change )", y = "-log10( adjusted p-value)", color = "DEG status")
-}
-
-```
-
-
-```{r gene conversion table}
+``` r
 conversion_table <- fread("~/GitHub/CellDecon/input/rnaseq/conversion_table.tsv")
-
 ```
-
-
 
 # Standard DEA
 
-First we perform differential expression analysis utilizing only the differences between diets to identify DEGs. 
+First we perform differential expression analysis utilizing only the
+differences between diets to identify DEGs.
 
-```{r read data}
-
+``` r
 # Read expression data
 exp_df <- fread(file = "~/GitHub/CellDecon/input/rnaseq/filtered_counts.tsv")
 rna_mat <- as.matrix(exp_df[,3:ncol(exp_df)])
@@ -70,19 +27,31 @@ coldat <- data.frame(Diet = as.factor(condition),
                      Sample = colnames(rna_mat), 
                      stringsAsFactors = TRUE)
 coldat$Diet <- relevel(coldat$Diet, ref = "CSAA")
-
 ```
 
+Use DESeq2 to identify differences between diets
 
-Use DESeq2 to identify differences between diets 
-
-```{r}
+``` r
 deseq_rna_base <- DESeqDataSetFromMatrix(countData = rna_mat,
                                          colData = coldat,
                                          design = ~ Diet)
 
 deseq_rna_base <- DESeq(deseq_rna_base)
+```
 
+    ## estimating size factors
+
+    ## estimating dispersions
+
+    ## gene-wise dispersion estimates
+
+    ## mean-dispersion relationship
+
+    ## final dispersion estimates
+
+    ## fitting model and testing
+
+``` r
 RNA_DE_PTS_vs_CSAA <- results(deseq_rna_base, 
                               name="Diet_PTS_vs_CSAA",
                               pAdjustMethod = "BH", 
@@ -104,17 +73,21 @@ if(!file.exists(out_file)){
 
 ## Visualize results
 
-```{r}
+``` r
 hist(RNA_DE_PTS_vs_CSAA$pvalue, main = "CSAA vs PTS", xlab = "p-value")
+```
 
+![](DifferentialExpression_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+``` r
 alpha = 0.05
 log2FC = 1
 custom_volcano(RNA_DE_PTS_vs_CSAA, alpha, log2FC)
-
 ```
 
-```{r}
+![](DifferentialExpression_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
+``` r
 base_DEGs <- merge.data.table(x = conversion_table,
                               y =  RNA_DE_PTS_vs_CSAA, 
                               by.x = "ENSEMBL", 
@@ -129,18 +102,13 @@ if(!file.exists(out_file)){
          sep = '\t', na = "",
          row.names = FALSE, col.names = TRUE)
 }
-
 ```
-
-
 
 # Cell deconvolution results
 
+First, we read the calculated cell fractions.
 
-First, we read the calculated cell fractions. 
-
-```{r}
-
+``` r
 fractions <- fread("~/GitHub/CellDecon/output/CIBERSORTx/fractions_Sone2one_Mone2one_newExp.txt")
 names(fractions) <- str_replace(str_replace(names(fractions), pattern = " Lineage", replacement = ""),pattern = " ", replacement = "")
 fractions <- fractions[, .SD, .SDcols = c("Mixture","BCell","TCell","Macrophage","Neutrophil")]
@@ -157,15 +125,30 @@ coldat_decon <- merge.data.table(x = coldat, y = fractions_sub,
 coldat_decon$Diet <- relevel(coldat_decon$Diet, ref = "CSAA")
 ```
 
-Then we identify the differentially expressed genes incorporating the cell fractions. 
+Then we identify the differentially expressed genes incorporating the
+cell fractions.
 
-```{r}
+``` r
 # Build DESeq object to perform the analysis
 deseq_rna_decon <- DESeqDataSetFromMatrix(countData = rna_mat,
                                           colData = coldat_decon,
                                           design = ~ Diet + TCell + Macrophage + BCell )
 deseq_rna_decon <- DESeq(deseq_rna_decon)
+```
 
+    ## estimating size factors
+
+    ## estimating dispersions
+
+    ## gene-wise dispersion estimates
+
+    ## mean-dispersion relationship
+
+    ## final dispersion estimates
+
+    ## fitting model and testing
+
+``` r
 decon_RNA_DE_PTS_vs_CSAA <- results(deseq_rna_decon, 
                                     name="Diet_PTS_vs_CSAA",
                                     pAdjustMethod = "BH", 
@@ -182,21 +165,25 @@ if(!file.exists(out_file)){
          sep = '\t', na = "",
          row.names = FALSE, col.names = TRUE)
 }
-
 ```
 
+## Visualize deconvolution results
 
-## Visualize deconvolution results 
-
-```{r}
+``` r
 hist(decon_RNA_DE_PTS_vs_CSAA$pvalue, main = "CSAA vs PTS", xlab = "p-value")
+```
 
+![](DifferentialExpression_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
 alpha = 0.05
 log2FC = 1
 custom_volcano(decon_RNA_DE_PTS_vs_CSAA, alpha, log2FC)
 ```
 
-```{r}
+![](DifferentialExpression_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
+
+``` r
 decon_DEGs <- merge.data.table(conversion_table, 
                                decon_RNA_DE_PTS_vs_CSAA, 
                                by.x = "ENSEMBL", 
@@ -211,13 +198,4 @@ if(!file.exists(out_file)){
          sep = '\t', na = "",
          row.names = FALSE, col.names = TRUE)
 }
-
 ```
-
-
-
-
-
-
-
-

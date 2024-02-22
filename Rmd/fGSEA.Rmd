@@ -153,8 +153,8 @@ dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd
 ```
 
 
-```{r}
 pathway_name <- topPathwaysDown[10]
+```{r}
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
 pathway_genes <- pathways[[pathway_name]]

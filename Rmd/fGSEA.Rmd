@@ -1,0 +1,192 @@
+---
+title: "fGSEA"
+author: "Marco Tello"
+date: "2024-02-16"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(fgsea)
+library(reactome.db)
+library(org.Rn.eg.db)
+library(biomaRt)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r read data}
+decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_full.tsv")
+
+```
+
+
+## Gene Set Enrichment Analysis
+
+```{r Initialize BiomarRt DBs}
+# Filter to keep only entries with GeneSymbol
+# Prepare elements for doing a query in biomaRt
+# ENSEMBL genes
+ensembl <- useEnsembl(biomart = "genes", 
+                      dataset = "rnorvegicus_gene_ensembl", version = 110)
+# Generate conversion table
+# Map ENSEMBL gene IDS to 
+# Rat Genome Database (RGD) symbols
+gene_IDs <- getBM(filters= "ensembl_gene_id", 
+                  attributes= c("ensembl_gene_id","rgd_symbol", "entrezgene_id", "entrezgene_accession"),
+                  values = decon_DE$Gene, 
+                  mart= ensembl)
+gene_IDs <- as.data.table(gene_IDs)
+```
+
+
+```{r}
+# Add column
+dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
+                             by.x = "ensembl_gene_id", by.y = "Gene", all.x = FALSE)
+setorder(dDEG_PTS, -stat)
+
+# Remove duplicated entrez
+dup_entrez <- na.omit(unique(dDEG_PTS$entrezgene_id[duplicated(dDEG_PTS$entrezgene_id)]))
+avg_stat <- na.omit(dDEG_PTS[(entrezgene_id %in% dup_entrez)])[, .(stat = mean(stat)), by = entrezgene_id]
+
+dDEG_PTS_nodup <- na.omit(dDEG_PTS[!(entrezgene_id %in% dup_entrez)])
+
+dPTS_ranks <- c(dDEG_PTS_nodup$stat, avg_stat$stat)
+names(dPTS_ranks) <- c(dDEG_PTS_nodup$entrezgene_id, avg_stat$entrezgene_id)
+dPTS_ranks <- sort(dPTS_ranks, decreasing = TRUE)
+
+# Get reactome pathways for our genes
+pathways <- reactomePathways(names(dPTS_ranks))
+
+```
+
+```{r}
+set.seed(123)
+fgsea_dPTS <- fgsea(pathways = pathways,
+                    stats = dPTS_ranks,
+                    minSize = 15,
+                    maxSize = 500,
+                    eps = 0.0)
+```
+
+### Overview of top pathways
+
+```{r}
+topPathwaysUp <- fgsea_dPTS[ES > 0 & padj < 0.05][head(order(-NES), n=10), pathway]
+topPathwaysDown <- fgsea_dPTS[ES < 0 & padj < 0.05][head(order(NES), n=10), pathway]
+topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+plotGseaTable(pathways[topPathways], dPTS_ranks, fgsea_dPTS, 
+              gseaParam=0.5)
+```
+
+### Top down-regulated pathways
+
+
+```{r}
+pathway_name <- topPathwaysDown[1]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+```{r}
+pathway_name <- topPathwaysDown[2]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+
+```
+
+```{r}
+pathway_name <- topPathwaysDown[3]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+
+```{r}
+pathway_name <- topPathwaysDown[4]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+```{r}
+pathway_name <- topPathwaysDown[5]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+```{r}
+pathway_name <- topPathwaysDown[6]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+```{r}
+pathway_name <- topPathwaysDown[7]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+
+```{r}
+pathway_name <- topPathwaysDown[8]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+
+```{r}
+pathway_name <- topPathwaysDown[10]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+```
+
+
+### Top up-regulated pathways
+
+```{r}
+pathway_name <- topPathwaysUp[8]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+
+```
+
+```{r}
+pathway_name <- topPathwaysUp[9]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+
+```
+
+```{r}
+pathway_name <- topPathwaysUp[10]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+dDEG_PTS[entrezgene_id %in% pathway_genes][padj < 0.05][, .(ensembl_gene_id, rgd_symbol, log2FoldChange)]
+
+```

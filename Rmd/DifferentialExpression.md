@@ -193,7 +193,7 @@ decon_DEGs[, padj := round(padj, 2)]
 
 out_file <- "~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv"
 if(!file.exists(out_file)){
-  fwrite(decon_DEGs[padj < 0.05], file = out_file, 
+  fwrite(decon_DEGs[padj <= 0.05], file = out_file, 
          append = FALSE, quote = FALSE, 
          sep = '\t', na = "",
          row.names = FALSE, col.names = TRUE)

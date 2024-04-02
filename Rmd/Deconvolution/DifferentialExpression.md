@@ -88,11 +88,28 @@ custom_volcano(RNA_DE_PTS_vs_CSAA, alpha, log2FC)
 ![](DifferentialExpression_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 ``` r
+## Pull rat annotation in biomaRt
+ensembl_v104 <- useEnsembl(biomart = "genes",
+                           dataset = "rnorvegicus_gene_ensembl",
+                           version = 104)
+
+## Consider only the genes from the expression data
+values <- unique(RNA_DE_PTS_vs_CSAA$Gene)
+
+##### One to one orthologs #####
+conversion_table <- getBM(attributes=c("ensembl_gene_id",
+                                     "external_gene_name"),
+                        filters = "ensembl_gene_id", 
+                        values = values, 
+                        mart= ensembl_v104)
+setnames(conversion_table, "ensembl_gene_id", "ENSEMBL")
+setnames(conversion_table, "external_gene_name", "Symbol")
+
 base_DEGs <- merge.data.table(x = conversion_table,
                               y =  RNA_DE_PTS_vs_CSAA, 
                               by.x = "ENSEMBL", 
                               by.y = "Gene")
-
+base_DEGs <- data.table(base_DEGs)
 base_DEGs[, padj := round(padj, 2)]
 
 out_file <- "~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv"
@@ -184,11 +201,24 @@ custom_volcano(decon_RNA_DE_PTS_vs_CSAA, alpha, log2FC)
 ![](DifferentialExpression_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
 
 ``` r
+## Consider only the genes from the expression data
+values <- unique(decon_RNA_DE_PTS_vs_CSAA$Gene)
+
+##### One to one orthologs #####
+conversion_table <- getBM(attributes=c("ensembl_gene_id",
+                                     "external_gene_name"),
+                        filters = "ensembl_gene_id", 
+                        values = values, 
+                        mart= ensembl_v104)
+
+setnames(conversion_table, "ensembl_gene_id", "ENSEMBL")
+setnames(conversion_table, "external_gene_name", "Symbol")
+
 decon_DEGs <- merge.data.table(conversion_table, 
                                decon_RNA_DE_PTS_vs_CSAA, 
                                by.x = "ENSEMBL", 
                                by.y = "Gene")
-
+decon_DEGs <- data.table(decon_DEGs)
 decon_DEGs[, padj := round(padj, 2)]
 
 out_file <- "~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv"

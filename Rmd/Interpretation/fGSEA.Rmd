@@ -18,10 +18,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r read data}
+
 decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_full.tsv")
 
-base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", select = c(1,2,4), col.names = c("ENSEMBL","Symbol", "baseFC"))
-decon_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv", select = c(1,2,4), col.names = c("ENSEMBL","Symbol", "deconFC"))
+
+base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", 
+                   select = c(1,2,4), 
+                   col.names = c("ENSEMBL","Symbol", "baseFC"))
+base_DEGs[, baseFC := 2^abs(baseFC) * sign(baseFC)]
+
+decon_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv", 
+                    select = c(1,2,4), 
+                    col.names = c("ENSEMBL","Symbol", "deconFC"))
+decon_DEGs[, deconFC := 2^abs(deconFC) * sign(deconFC)]
+
 DEG_full <- merge.data.table(x = base_DEGs, y = decon_DEGs, all = TRUE)
 ```
 
@@ -33,12 +43,15 @@ DEG_full <- merge.data.table(x = base_DEGs, y = decon_DEGs, all = TRUE)
 # Prepare elements for doing a query in biomaRt
 # ENSEMBL genes
 ensembl <- useEnsembl(biomart = "genes", 
-                      dataset = "rnorvegicus_gene_ensembl", version = 110)
+                      dataset = "rnorvegicus_gene_ensembl", version = 104)
 # Generate conversion table
 # Map ENSEMBL gene IDS to 
 # Rat Genome Database (RGD) symbols
 gene_IDs <- getBM(filters= "ensembl_gene_id", 
-                  attributes= c("ensembl_gene_id","rgd_symbol", "entrezgene_id", "entrezgene_accession"),
+                  attributes= c("ensembl_gene_id",
+                                "rgd_symbol", 
+                                "entrezgene_id", 
+                                "entrezgene_accession"),
                   values = decon_DE$ensembl_gene_id, 
                   mart= ensembl)
 gene_IDs <- as.data.table(gene_IDs)
@@ -48,11 +61,15 @@ gene_IDs <- as.data.table(gene_IDs)
 ```{r}
 # Add column
 dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
-                             by.x = "ensembl_gene_id", by.y = "ensembl_gene_id", all.x = FALSE)
+                             by.x = "ensembl_gene_id", 
+                             by.y = "ensembl_gene_id", 
+                             all.x = FALSE)
 setorder(dDEG_PTS, -stat)
 
 DEG_full <- merge.data.table(x = gene_IDs, y = DEG_full, 
-                             by.x = "ensembl_gene_id", by.y = "ENSEMBL", all.x = FALSE)
+                             by.x = "ensembl_gene_id", 
+                             by.y = "ENSEMBL", 
+                             all.x = FALSE)
 
 # Remove duplicated entrez
 dup_entrez <- na.omit(unique(dDEG_PTS$entrezgene_id[duplicated(dDEG_PTS$entrezgene_id)]))
@@ -162,6 +179,15 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 
 
 ```{r}
+pathway_name <- topPathwaysDown[9]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
+
+```
+
+```{r}
 pathway_name <- topPathwaysDown[10]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
@@ -174,6 +200,23 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ### Top up-regulated pathways
 
 ```{r}
+pathway_name <- topPathwaysUp[6]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
+
+```
+```{r}
+pathway_name <- topPathwaysUp[7]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
+
+```
+
+```{r}
 pathway_name <- topPathwaysUp[8]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
@@ -181,28 +224,6 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 
 ```
-
-```{r}
-pathway_name <- topPathwaysUp[9]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-
-```
-
-```{r}
-pathway_name <- topPathwaysUp[10]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-
-```
-
-
-
-
 
 
 

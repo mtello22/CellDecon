@@ -52,9 +52,23 @@ gene_IDs <- getBM(filters= "ensembl_gene_id",
                                 "rgd_symbol", 
                                 "entrezgene_id", 
                                 "entrezgene_accession"),
-                  values = decon_DE$ensembl_gene_id, 
+                  values = decon_DE$ENSEMBL, 
                   mart= ensembl)
-gene_IDs <- as.data.table(gene_IDs)
+gene_IDs <- na.omit(gene_IDs)
+
+# Verify new IDS
+new_ensembl <- useEnsembl(biomart = "genes", 
+                          dataset = "rnorvegicus_gene_ensembl")
+
+new_IDs <- getBM(filters= "rgd_symbol", 
+                  attributes= c("ensembl_gene_id",
+                                "rgd_symbol", 
+                                "entrezgene_id", 
+                                "entrezgene_accession"),
+                  values = gene_IDs$rgd_symbol, 
+                  mart = new_ensembl)
+gene_IDs <- as.data.table(new_IDs)
+
 ```
 
 
@@ -62,7 +76,7 @@ gene_IDs <- as.data.table(gene_IDs)
 # Add column
 dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
                              by.x = "ensembl_gene_id", 
-                             by.y = "ensembl_gene_id", 
+                             by.y = "ENSEMBL", 
                              all.x = FALSE)
 setorder(dDEG_PTS, -stat)
 
@@ -179,15 +193,6 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 
 
 ```{r}
-pathway_name <- topPathwaysDown[9]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-
-```
-
-```{r}
 pathway_name <- topPathwaysDown[10]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
@@ -200,24 +205,24 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ### Top up-regulated pathways
 
 ```{r}
-pathway_name <- topPathwaysUp[6]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-
-```
-```{r}
-pathway_name <- topPathwaysUp[7]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-
-```
-
-```{r}
 pathway_name <- topPathwaysUp[8]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
+
+```
+
+```{r}
+pathway_name <- topPathwaysUp[9]
+plotEnrichment(pathway = pathways[[pathway_name]], 
+               stats = dPTS_ranks) + labs(title=pathway_name)
+pathway_genes <- pathways[[pathway_name]]
+unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
+
+```
+```{r}
+pathway_name <- topPathwaysUp[10]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
 pathway_genes <- pathways[[pathway_name]]

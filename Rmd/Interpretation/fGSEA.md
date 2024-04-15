@@ -36,16 +36,29 @@ gene_IDs <- getBM(filters= "ensembl_gene_id",
                                 "rgd_symbol", 
                                 "entrezgene_id", 
                                 "entrezgene_accession"),
-                  values = decon_DE$ensembl_gene_id, 
+                  values = decon_DE$ENSEMBL, 
                   mart= ensembl)
-gene_IDs <- as.data.table(gene_IDs)
+gene_IDs <- na.omit(gene_IDs)
+
+# Verify new IDS
+new_ensembl <- useEnsembl(biomart = "genes", 
+                          dataset = "rnorvegicus_gene_ensembl")
+
+new_IDs <- getBM(filters= "rgd_symbol", 
+                  attributes= c("ensembl_gene_id",
+                                "rgd_symbol", 
+                                "entrezgene_id", 
+                                "entrezgene_accession"),
+                  values = gene_IDs$rgd_symbol, 
+                  mart = new_ensembl)
+gene_IDs <- as.data.table(new_IDs)
 ```
 
 ``` r
 # Add column
 dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
                              by.x = "ensembl_gene_id", 
-                             by.y = "ensembl_gene_id", 
+                             by.y = "ENSEMBL", 
                              all.x = FALSE)
 setorder(dDEG_PTS, -stat)
 
@@ -81,7 +94,7 @@ fgsea_dPTS <- fgsea(pathways = pathways,
                     eps = 0.0)
 ```
 
-    ## Warning in preparePathwaysAndStats(pathways, stats, minSize, maxSize, gseaParam, : There are ties in the preranked stats (2.5% of the list).
+    ## Warning in preparePathwaysAndStats(pathways, stats, minSize, maxSize, gseaParam, : There are ties in the preranked stats (1.49% of the list).
     ## The order of those tied genes will be arbitrary, which may produce unexpected results.
 
 ### Overview of top pathways
@@ -112,34 +125,17 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##           Symbol    baseFC   deconFC
-    ##           <char>     <num>     <num>
-    ##  1:         Psap        NA -1.402029
-    ##  2:       RT1-S3        NA -1.700174
-    ##  3:       RT1-N3        NA -1.647353
-    ##  4:       Csnk2b -1.609453        NA
-    ##  5:        Pdap1        NA -1.599661
-    ##  6:        Itgb2        NA -1.647252
-    ##  7:         Hpse        NA -1.682347
-    ##  8:        Actr2        NA -1.518832
-    ##  9:         Cd63        NA -1.767772
-    ## 10:       Cyb5r3        NA -1.920235
-    ## 11:        Psmc3        NA -1.472786
-    ## 12:        Rab7a        NA -1.882784
-    ## 13:         Alad        NA -2.211516
-    ## 14:        P2rx1        NA -1.744262
-    ## 15:        Gstp1        NA -1.993179
-    ## 16: LOC100360087        NA -1.919994
-    ## 17:       Fcgr3a        NA -1.702447
-    ## 18:       RT1-N2        NA -1.866159
-    ## 19:       RT1-A2        NA -1.605199
-    ## 20:         Ftl1        NA -1.951631
-    ## 21:      RT1-CE3        NA -1.697787
-    ## 22:     RT1-M6-2        NA -1.668896
-    ## 23:       Sting1        NA -1.561278
-    ## 24:       Rab27a        NA -1.769143
-    ## 25:         Bst2        NA -4.372745
-    ##           Symbol    baseFC   deconFC
+    ##    Symbol    baseFC   deconFC
+    ##    <char>     <num>     <num>
+    ## 1:   Txn2        NA -2.131431
+    ## 2:  Psmf1        NA -1.966111
+    ## 3:  Psmc5        NA -1.546341
+    ## 4:  Psmc3        NA -1.472786
+    ## 5:  Gstp1        NA -1.993179
+    ## 6:  Cox5a        NA -1.695041
+    ## 7: Hba-a1 -2.133171 -2.716200
+    ## 8: Hbb-bs        NA -3.497330
+    ## 9: Hba-a2        NA -3.123547
 
 ``` r
 pathway_name <- topPathwaysDown[2]
@@ -154,16 +150,30 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##    Symbol    baseFC   deconFC
-    ##    <char>     <num>     <num>
-    ## 1:   Txn2        NA -2.131431
-    ## 2:  Psmf1        NA -1.966111
-    ## 3:  Psmc5        NA -1.546341
-    ## 4:  Psmc3        NA -1.472786
-    ## 5:  Gstp1        NA -1.993179
-    ## 6:  Cox5a        NA -1.695041
-    ## 7: Hba-a1 -2.133171 -2.716200
-    ## 8: Hba-a2        NA -3.123547
+    ##       Symbol    baseFC   deconFC
+    ##       <char>     <num>     <num>
+    ##  1:     Psap        NA -1.402029
+    ##  2:   RT1-S3        NA -1.700174
+    ##  3:   RT1-N3        NA -1.647353
+    ##  4:   Csnk2b -1.609453        NA
+    ##  5:    Pdap1        NA -1.599661
+    ##  6:    Itgb2        NA -1.647252
+    ##  7:     Hpse        NA -1.682347
+    ##  8:    Actr2        NA -1.518832
+    ##  9:     Cd63        NA -1.767772
+    ## 10:   Cyb5r3        NA -1.920235
+    ## 11:    Psmc3        NA -1.472786
+    ## 12:    Rab7a        NA -1.882784
+    ## 13:     Alad        NA -2.211516
+    ## 14:    P2rx1        NA -1.744262
+    ## 15:    Gstp1        NA -1.993179
+    ## 16:   Fcgr3a        NA -1.702447
+    ## 17:   RT1-N2        NA -1.866159
+    ## 18: RT1-M6-2        NA -1.668896
+    ## 19:   Hbb-bs        NA -3.497330
+    ## 20:   Rab27a        NA -1.769143
+    ## 21:     Bst2        NA -4.372745
+    ##       Symbol    baseFC   deconFC
 
 ``` r
 pathway_name <- topPathwaysDown[3]
@@ -178,18 +188,10 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##       Symbol baseFC   deconFC
-    ##       <char>  <num>     <num>
-    ##  1:   RT1-S3     NA -1.700174
-    ##  2:   RT1-N3     NA -1.647353
-    ##  3:    Psmf1     NA -1.966111
-    ##  4:    Psmc5     NA -1.546341
-    ##  5:    Psmc3     NA -1.472786
-    ##  6:   RT1-N2     NA -1.866159
-    ##  7:    Tapbp     NA -2.143966
-    ##  8:   RT1-A2     NA -1.605199
-    ##  9:  RT1-CE3     NA -1.697787
-    ## 10: RT1-M6-2     NA -1.668896
+    ##    Symbol baseFC   deconFC
+    ##    <char>  <num>     <num>
+    ## 1:  Actr2     NA -1.518832
+    ## 2:   Actb     NA -2.134105
 
 ``` r
 pathway_name <- topPathwaysDown[4]
@@ -208,11 +210,12 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
     ##      <char>  <num>     <num>
     ## 1:   RT1-S3     NA -1.700174
     ## 2:   RT1-N3     NA -1.647353
-    ## 3:   RT1-N2     NA -1.866159
-    ## 4:    Tapbp     NA -2.143966
-    ## 5:   RT1-A2     NA -1.605199
-    ## 6:  RT1-CE3     NA -1.697787
-    ## 7: RT1-M6-2     NA -1.668896
+    ## 3:    Psmf1     NA -1.966111
+    ## 4:    Psmc5     NA -1.546341
+    ## 5:    Psmc3     NA -1.472786
+    ## 6:   RT1-N2     NA -1.866159
+    ## 7:    Tapbp     NA -2.143966
+    ## 8: RT1-M6-2     NA -1.668896
 
 ``` r
 pathway_name <- topPathwaysDown[5]
@@ -227,10 +230,13 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##    Symbol baseFC   deconFC
-    ##    <char>  <num>     <num>
-    ## 1:  Actr2     NA -1.518832
-    ## 2:   Actb     NA -2.134105
+    ##    Symbol    baseFC   deconFC
+    ##    <char>     <num>     <num>
+    ## 1: Tuba4a        NA -1.915051
+    ## 2: Dynll2        NA -2.176723
+    ## 3: Golga2 -1.421502        NA
+    ## 4: Tubb2b        NA -1.593484
+    ## 5: Tubb2a        NA -1.574827
 
 ``` r
 pathway_name <- topPathwaysDown[6]
@@ -245,13 +251,23 @@ pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##    Symbol    baseFC   deconFC
-    ##    <char>     <num>     <num>
-    ## 1: Tuba4a        NA -1.915051
-    ## 2: Dynll2        NA -2.176723
-    ## 3: Golga2 -1.421502        NA
-    ## 4: Tubb2b        NA -1.593484
-    ## 5: Tubb2a        NA -1.574827
+    ##     Symbol    baseFC   deconFC
+    ##     <char>     <num>     <num>
+    ##  1: Tuba4a        NA -1.915051
+    ##  2:   Txn2        NA -2.131431
+    ##  3: Dynll2        NA -2.176723
+    ##  4:  Psmf1        NA -1.966111
+    ##  5:  Psmc5        NA -1.546341
+    ##  6:  Psmc3        NA -1.472786
+    ##  7:  Hsbp1        NA -1.485672
+    ##  8:  Ube2c        NA -2.033627
+    ##  9: Tubb2b        NA -1.593484
+    ## 10: Tubb2a        NA -1.574827
+    ## 11:  Gstp1        NA -1.993179
+    ## 12:  Cox5a        NA -1.695041
+    ## 13: Hba-a1 -2.133171 -2.716200
+    ## 14: Hbb-bs        NA -3.497330
+    ## 15: Hba-a2        NA -3.123547
 
 ``` r
 pathway_name <- topPathwaysDown[7]
@@ -281,8 +297,8 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
     ## 11:  Gstp1        NA -1.993179
     ## 12:  Cox5a        NA -1.695041
     ## 13: Hba-a1 -2.133171 -2.716200
-    ## 14: Hba-a2        NA -3.123547
-    ## 15:   H1f5        NA -1.619889
+    ## 14: Hbb-bs        NA -3.497330
+    ## 15: Hba-a2        NA -3.123547
 
 ``` r
 pathway_name <- topPathwaysDown[8]
@@ -291,37 +307,6 @@ plotEnrichment(pathway = pathways[[pathway_name]],
 ```
 
 ![](fGSEA_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-
-``` r
-pathway_genes <- pathways[[pathway_name]]
-unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
-```
-
-    ##     Symbol    baseFC   deconFC
-    ##     <char>     <num>     <num>
-    ##  1: Tuba4a        NA -1.915051
-    ##  2:   Txn2        NA -2.131431
-    ##  3: Dynll2        NA -2.176723
-    ##  4:  Psmf1        NA -1.966111
-    ##  5:  Psmc5        NA -1.546341
-    ##  6:  Psmc3        NA -1.472786
-    ##  7:  Hsbp1        NA -1.485672
-    ##  8:  Ube2c        NA -2.033627
-    ##  9: Tubb2b        NA -1.593484
-    ## 10: Tubb2a        NA -1.574827
-    ## 11:  Gstp1        NA -1.993179
-    ## 12:  Cox5a        NA -1.695041
-    ## 13: Hba-a1 -2.133171 -2.716200
-    ## 14: Hba-a2        NA -3.123547
-    ## 15:   H1f5        NA -1.619889
-
-``` r
-pathway_name <- topPathwaysDown[9]
-plotEnrichment(pathway = pathways[[pathway_name]], 
-               stats = dPTS_ranks) + labs(title=pathway_name)
-```
-
-![](fGSEA_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 pathway_genes <- pathways[[pathway_name]]
@@ -343,28 +328,29 @@ plotEnrichment(pathway = pathways[[pathway_name]],
                stats = dPTS_ranks) + labs(title=pathway_name)
 ```
 
-![](fGSEA_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](fGSEA_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 pathway_genes <- pathways[[pathway_name]]
 unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
 ```
 
-    ##    Symbol baseFC   deconFC
-    ##    <char>  <num>     <num>
-    ## 1:  Psmf1     NA -1.966111
-    ## 2:  Psmc5     NA -1.546341
-    ## 3:  Psmc3     NA -1.472786
+    ##    Symbol    baseFC   deconFC
+    ##    <char>     <num>     <num>
+    ## 1:  Cox5a        NA -1.695041
+    ## 2: Hba-a1 -2.133171 -2.716200
+    ## 3: Hbb-bs        NA -3.497330
+    ## 4: Hba-a2        NA -3.123547
 
 ### Top up-regulated pathways
 
 ``` r
-pathway_name <- topPathwaysUp[6]
+pathway_name <- topPathwaysUp[8]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
 ```
 
-![](fGSEA_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](fGSEA_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
 pathway_genes <- pathways[[pathway_name]]
@@ -377,12 +363,12 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
     ## 2:  Itgb3     NA -1.789875
 
 ``` r
-pathway_name <- topPathwaysUp[7]
+pathway_name <- topPathwaysUp[9]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
 ```
 
-![](fGSEA_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](fGSEA_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` r
 pathway_genes <- pathways[[pathway_name]]
@@ -394,12 +380,12 @@ unique(DEG_full[entrezgene_id %in% pathway_genes][, .(Symbol, baseFC, deconFC)])
     ## 1: Atp2a3 -1.854113 -1.991379
 
 ``` r
-pathway_name <- topPathwaysUp[8]
+pathway_name <- topPathwaysUp[10]
 plotEnrichment(pathway = pathways[[pathway_name]], 
                stats = dPTS_ranks) + labs(title=pathway_name)
 ```
 
-![](fGSEA_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](fGSEA_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ``` r
 pathway_genes <- pathways[[pathway_name]]
@@ -433,6 +419,7 @@ unique(DEG_full[rgd_symbol %in% c("Hbe1", "Hbb", "Hba-a1")][, .(Symbol, baseFC, 
     ##    <char>     <num>     <num>
     ## 1:   Hbe1        NA -5.082036
     ## 2: Hba-a1 -2.133171 -2.716200
+    ## 3: Hbb-bs        NA -3.497330
 
 ### Cell immunity
 

@@ -12,6 +12,7 @@ library(reactome.db)
 library(org.Rn.eg.db)
 library(biomaRt)
 library(ggplot2)
+library(stats)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -20,7 +21,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r read data}
 
 decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_full.tsv")
-
 
 base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", 
                    select = c(1,2,4), 
@@ -33,6 +33,7 @@ decon_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv",
 decon_DEGs[, deconFC := 2^abs(deconFC) * sign(deconFC)]
 
 DEG_full <- merge.data.table(x = base_DEGs, y = decon_DEGs, all = TRUE)
+
 ```
 
 
@@ -43,7 +44,8 @@ DEG_full <- merge.data.table(x = base_DEGs, y = decon_DEGs, all = TRUE)
 # Prepare elements for doing a query in biomaRt
 # ENSEMBL genes
 ensembl <- useEnsembl(biomart = "genes", 
-                      dataset = "rnorvegicus_gene_ensembl", version = 104)
+                      dataset = "rnorvegicus_gene_ensembl", 
+                      version = 104)
 # Generate conversion table
 # Map ENSEMBL gene IDS to 
 # Rat Genome Database (RGD) symbols
@@ -54,20 +56,20 @@ gene_IDs <- getBM(filters= "ensembl_gene_id",
                                 "entrezgene_accession"),
                   values = decon_DE$ENSEMBL, 
                   mart= ensembl)
-gene_IDs <- na.omit(gene_IDs)
+gene_IDs <- as.data.table(na.omit(gene_IDs))
 
-# Verify new IDS
-new_ensembl <- useEnsembl(biomart = "genes", 
-                          dataset = "rnorvegicus_gene_ensembl")
-
-new_IDs <- getBM(filters= "rgd_symbol", 
-                  attributes= c("ensembl_gene_id",
-                                "rgd_symbol", 
-                                "entrezgene_id", 
-                                "entrezgene_accession"),
-                  values = gene_IDs$rgd_symbol, 
-                  mart = new_ensembl)
-gene_IDs <- as.data.table(new_IDs)
+# # Verify new IDS
+# new_ensembl <- useEnsembl(biomart = "genes", 
+#                           dataset = "rnorvegicus_gene_ensembl")
+# 
+# new_IDs <- getBM(filters= "rgd_symbol", 
+#                   attributes= c("ensembl_gene_id",
+#                                 "rgd_symbol", 
+#                                 "entrezgene_id", 
+#                                 "entrezgene_accession"),
+#                   values = gene_IDs$rgd_symbol, 
+#                   mart = new_ensembl)
+# gene_IDs <- as.data.table(new_IDs)
 
 ```
 

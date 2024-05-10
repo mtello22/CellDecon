@@ -4,19 +4,19 @@ library(edgeR)
 library(org.Rn.eg.db)
 
 
-input_file <- "~/GitHub/CellDecon/input/rnaseq/filtered_counts.tsv"
+input_file <- "~/GitHub/CellDecon/input/rnaseq/filtered_counts_Rnorv6.tsv"
 cibersort_path <- "~/GitHub/CellDecon/input/cibersortx"
 
 ##### Read shared data
 # Read expression data
 exp_df <- fread(input_file)
 # Select only expression columns
-exp_mat <- exp_df[, .SD, .SDcols = !c("ENSEMBLID", 
-                                      "Length")]
+exp_mat <- exp_df[, .SD, .SDcols = !c("ENSEMBL", 
+                                      "GeneSymbol")]
 # Perform CPM normalization on expression data
 exp_mat <- cpm(exp_mat, log = FALSE)
 # Merge in single DF
-exp_df <- cbind(exp_df[, .SD, .SDcols =  c("ENSEMBLID")], exp_mat)
+exp_df <- cbind(exp_df[, .SD, .SDcols =  c("GeneSymbol","ENSEMBL")], exp_mat)
 
 
 # Read metaddata reference
@@ -28,18 +28,19 @@ initial_celltypes <- sort(c("Neutrophil Lineage",
                             "B Cell Lineage", 
                             "Macrophage Lineage"))
 phenotype_sub <- phenotype_data[cell_lineage %in% initial_celltypes]
+
 # Select only samples associated with the target lienages
 reference_data <- fread(file = file.path(cibersort_path, 
                                          "Haemopedia-Mouse-RNASeq_cpm.txt"), 
                         select = c("GeneID", phenotype_sub$sampleId))
 
 ## Pull rat annotation in biomaRt
-ensembl_v110 <- useEnsembl(biomart = "genes",
+ensembl_v104 <- useEnsembl(biomart = "genes",
                            dataset = "rnorvegicus_gene_ensembl",
-                           version = 110)
+                           version = 104)
 
 ## Consider only the genes from the expression data
-values <- unique(exp_df$ENSEMBLID)
+values <- unique(exp_df$GeneSymbol)
 
 ##### One to one orthologs #####
 ortholog_1to1  <- getBM(attributes=c("ensembl_gene_id",
@@ -48,9 +49,9 @@ ortholog_1to1  <- getBM(attributes=c("ensembl_gene_id",
                                      "mmusculus_homolog_associated_gene_name",
                                      "mmusculus_homolog_orthology_type",
                                      "mmusculus_homolog_orthology_confidence"),
-                        filters = "ensembl_gene_id", 
+                        filters = "external_gene_name", 
                         values = values, 
-                        mart= ensembl_v110)
+                        mart= ensembl_v104)
 ortholog_1to1 <- as.data.table(ortholog_1to1)
 ortholog_1to1 <- ortholog_1to1[mmusculus_homolog_orthology_type == "ortholog_one2one"
                                 ][mmusculus_homolog_orthology_confidence == 1
@@ -98,15 +99,14 @@ if(!file.exists(out_file)){
 
 
 ## Subset expression data
-exp_df_sub <- merge.data.table(x = ortholog_1to1,
-                               y = exp_df, 
-                               by.x = "ensembl_gene_id", 
-                               by.y = "ENSEMBLID", 
-                               all = FALSE) 
+# exp_df_sub <- merge.data.table(x = ortholog_1to1,
+#                                y = exp_df, 
+#                                by.x = "ensembl_gene_id", 
+#                                by.y = "ENSEMBLID", 
+#                                all = FALSE) 
 
-cibersort_exp <- exp_df_sub[, .SD, .SDcols = !c("mmusculus_homolog_ensembl_gene",
-                                                "external_gene_name")] 
-setnames(cibersort_exp, old = "ensembl_gene_id", "Gene")
+cibersort_exp <- exp_df[, .SD, .SDcols = !c("GeneSymbol")] 
+setnames(cibersort_exp, old = "ENSEMBL", "Gene")
 
 out_file <- file.path(cibersort_path, "cibersortx_ortholog_mix_cpm_one2one.txt")
 if(!file.exists(out_file)){

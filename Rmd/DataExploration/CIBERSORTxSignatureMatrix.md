@@ -64,7 +64,8 @@ with the genes used to deconvolute cell types
 
 ``` r
 signature_matrix <- fread("~/GitHub/CellDecon/output/CIBERSORTx/signature_one2one.txt")
-decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv", select = 1:2)
+decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_reduced.tsv")
+decon_DE <- decon_DE[abs(log2FoldChange) > 1 & padj <= 0.05][, .SD, .SDcols = c("ENSEMBL", "Symbol")]
 decon_DE[, Decon := TRUE]
 standard_DE <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", select = 1:2)
 standard_DE[, Standard := TRUE]

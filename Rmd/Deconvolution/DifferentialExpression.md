@@ -128,7 +128,7 @@ cell fractions.
 # Build DESeq object to perform the analysis
 deseq_rna_decon <- DESeqDataSetFromMatrix(countData = rna_mat,
                                           colData = coldat_decon,
-                                          design = ~ Diet + TCell + Macrophage + BCell + Neutrophil)
+                                          design = ~ Diet + TCell + Macrophage + BCell)
 deseq_rna_decon <- DESeq(deseq_rna_decon)
 ```
 
@@ -143,8 +143,6 @@ deseq_rna_decon <- DESeq(deseq_rna_decon)
     ## final dispersion estimates
 
     ## fitting model and testing
-
-    ## 3 rows did not converge in beta, labelled in mcols(object)$betaConv. Use larger maxit argument with nbinomWaldTest
 
 ``` r
 decon_RNA_DE_PTS_vs_CSAA <- results(deseq_rna_decon, 

@@ -47,17 +47,21 @@ fractions <- fractions[, .SD, .SDcols = c("Mixture","BCell","TCell","Macrophage"
 
 ```{r visualize fractions}
 plot_data <- fractions 
+plot_data <- plot_data[, round(.SD/sum(.SD), 3), .SDcols = !"Mixture", by = Mixture]
 plot_data <- melt(plot_data, id.vars = "Mixture", variable.name = "CellType", value.name = "Fraction")
 plot_data[, Condition := "CSAA"]
-plot_data[grepl(pattern =  "CSAAPTS", x = Mixture), Condition := "CSAA_PTS"]
-plot_data[, Mixture := str_extract(Mixture, "_[0-9]+.")]
-plot_data[, Mixture := str_replace(Mixture, pattern = "_", replacement = "")]
-plot_data[, Mixture := str_replace(Mixture, pattern = "\\.", replacement =  "")]
+plot_data[grepl(pattern =  "PTS", x = Mixture), Condition := "PTS"]
 
 ggplot(plot_data, aes(x=Mixture, y=Fraction, fill = CellType)) +
-    geom_bar(stat = "identity")+
-    facet_wrap(~Condition, scales = "free_x") + 
-    theme_bw()
+  geom_bar(stat = "identity")+
+  facet_wrap(~Condition, scales = "free_x") + 
+  scale_y_continuous(labels = scales::percent) +
+  labs(fill = "Cell Type",
+       x= "Sample")+ 
+  theme_bw() +
+  geom_text(aes(label=scales::percent(Fraction)), 
+            position=position_stack(vjust=0.5), 
+            color="black", size=3)
 ```
 
 ### DEG overlap with signature matrix 
@@ -72,7 +76,7 @@ decon_DE[, Decon := TRUE]
 standard_DE <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", select = 1:2)
 standard_DE[, Standard := TRUE]
 
-DEGs <- merge.data.table(x = decon_DE, y = standard_DE, all = TRUE)
+DEGs <- merge.data.table(x = decon_DE, y = standard_DE, all = TRUE, by = "ENSEMBL")
 DEGs <- DEGs[ENSEMBL %in% signature_matrix$NAME]
 
 ```
@@ -86,13 +90,16 @@ setorder(weight_sum, -weight)
 weight_sum[, rank := 1:nrow(weight_sum)]
 weight_sum[, shared := FALSE]
 weight_sum[ gene %in% DEGs$ENSEMBL, shared := TRUE]
+weight_sum <- weight_sum[gene != "ENSRNOG00000006783"]
 
 DEG_weights <- weight_sum[shared == TRUE, rank]
 ggplot(weight_sum, aes(x=rank, y=weight, color=shared))+
   geom_line() +
-  geom_point(size = 3, alpha = 0.2) +
+  geom_point(size = 2) +
   scale_color_manual(values = c("lightgrey", "red")) +
-  geom_vline(xintercept = DEG_weights, linetype = "dashed", color="red", linewidth = 1)
+  geom_vline(xintercept = DEG_weights, linetype = "dashed", color="red", linewidth = 0.51) +
+  theme_bw() +
+  labs(y = "Gene weight in signature matrix", x = "Rank", color = "DEG status")
 
 ```
 

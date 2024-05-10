@@ -138,7 +138,7 @@ Then we identify the differentially expressed genes incorporating the cell fract
 # Build DESeq object to perform the analysis
 deseq_rna_decon <- DESeqDataSetFromMatrix(countData = rna_mat,
                                           colData = coldat_decon,
-                                          design = ~ Diet + TCell + Macrophage + BCell + Neutrophil)
+                                          design = ~ Diet + TCell + Macrophage + BCell)
 deseq_rna_decon <- DESeq(deseq_rna_decon)
 
 decon_RNA_DE_PTS_vs_CSAA <- results(deseq_rna_decon, 

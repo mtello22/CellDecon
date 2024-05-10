@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r read data}
 
-decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_reduced.tsv")
+decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_full.tsv")
 
 base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", 
                    select = c(1,2,4), 

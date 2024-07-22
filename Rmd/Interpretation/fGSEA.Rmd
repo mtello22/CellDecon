@@ -22,14 +22,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_full.tsv")
 
-base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", 
+base_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/base_DEG.tsv", 
                    select = c(1,2,4), 
-                   col.names = c("ENSEMBL","Symbol", "baseFC"))
+                   col.names = c("ENSEMBLID","GeneSymbol", "baseFC"))
 base_DEGs[, baseFC := 2^abs(baseFC) * sign(baseFC)]
 
 decon_DEGs <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv", 
                     select = c(1,2,4), 
-                    col.names = c("ENSEMBL","Symbol", "deconFC"))
+                    col.names = c("ENSEMBLID","GeneSymbol", "deconFC"))
 decon_DEGs[, deconFC := 2^abs(deconFC) * sign(deconFC)]
 
 DEG_full <- merge.data.table(x = base_DEGs, y = decon_DEGs, all = TRUE)
@@ -78,13 +78,13 @@ gene_IDs <- as.data.table(na.omit(gene_IDs))
 # Add column
 dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
                              by.x = "ensembl_gene_id", 
-                             by.y = "ENSEMBL", 
+                             by.y = "ENSEMBLID", 
                              all.x = FALSE)
 setorder(dDEG_PTS, -stat)
 
 DEG_full <- merge.data.table(x = gene_IDs, y = DEG_full, 
                              by.x = "ensembl_gene_id", 
-                             by.y = "ENSEMBL", 
+                             by.y = "ENSEMBLID", 
                              all.x = FALSE)
 
 # Remove duplicated entrez

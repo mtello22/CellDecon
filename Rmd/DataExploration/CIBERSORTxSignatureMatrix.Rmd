@@ -71,15 +71,18 @@ It is also important to verify that the overlap of the dientified DEGs with the 
 ```{r format signature}
 
 signature_matrix <- fread("~/GitHub/CellDecon/output/CIBERSORTx/signature_one2one.txt")
-decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DESeq_reduced.tsv")
-decon_DE <- decon_DE[abs(log2FoldChange) > 1 & padj <= 0.05][, .SD, .SDcols = c("ENSEMBL", "Symbol")]
+
+decon_DE <- fread("~/GitHub/CellDecon/output/DESeq2/decon_DEG.tsv", select = 1:2)
 decon_DE[, Decon := TRUE]
-standard_DE <- fread("~/GitHub/CellDecon/output/DESeq2/standard_DEG.tsv", select = 1:2)
+
+standard_DE <- fread("~/GitHub/CellDecon/output/DESeq2/base_DEG.tsv", select = 1:2)
 standard_DE[, Standard := TRUE]
 
-DEGs <- merge.data.table(x = decon_DE, y = standard_DE, all = TRUE, by = "ENSEMBL")
-DEGs <- DEGs[ENSEMBL %in% signature_matrix$NAME]
-
+DEGs <- merge.data.table(x = decon_DE, y = standard_DE, all = TRUE, by = "ENSEMBLID")
+DEGs <- DEGs[ENSEMBLID %in% signature_matrix$NAME]
+DEGs[is.na(GeneSymbol.x), GeneSymbol.x := GeneSymbol.y]
+DEGs[, GeneSymbol.y := NULL]
+setnames(DEGs, "GeneSymbol.x", "GeneSymbol")
 ```
 
 The following plot shows the weight assigned by CIBERSORTx to each gene in the signature matrix. A high weight, indicates a high relevance during deconvolution. In red, I highlighted the genes from the signature matrix that overlap with the set of DEGs. 
@@ -91,7 +94,6 @@ setorder(weight_sum, -weight)
 weight_sum[, rank := 1:nrow(weight_sum)]
 weight_sum[, shared := FALSE]
 weight_sum[ gene %in% DEGs$ENSEMBL, shared := TRUE]
-weight_sum <- weight_sum[gene != "ENSRNOG00000006783"]
 
 DEG_weights <- weight_sum[shared == TRUE, rank]
 ggplot(weight_sum, aes(x=rank, y=weight, color=shared))+

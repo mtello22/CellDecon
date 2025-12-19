@@ -42,7 +42,7 @@ We looked at the density distribution of gene expression values for all samples.
 ```{r read data}
 # Read count table
 # We remove last sample which is not properly identified
-count_df <- fread(file.path(data_path, "count_df.tsv"), drop = "temp_024627_18") 
+count_df <- fread(file.path(data_path, "count_matrix_Rnorv6.tsv"), drop = "temp_024627_18") 
 names(count_df) <- names(count_df) %>%
   str_replace(pattern = "_\\d+\\.\\d+", replacement = "") %>%
   str_replace(pattern = "\\.", replacement = "_") %>%
@@ -326,6 +326,11 @@ PCA analysis confirmed that differences between diets are not the primary source
 
 ```{r}
 temp <- exp_mat[, c(1:5,10:14)]
+
+#Top 1000 variable
+# index <- which( rownames(temp) %in% names(sort(apply(X = temp, MARGIN = 1, var), decreasing = TRUE)[1:1000]))
+# temp <- temp[index,]
+
 PCs <- prcomp(t(cpm(temp)), center = TRUE, scale = TRUE)
 # Scree plot 
 fviz_eig(PCs)
@@ -341,13 +346,13 @@ PCs <- PCs %>%
     Diet == "PTS" ~ "red")) 
 
 PCs %>%
-  ggplot(aes(x = PC1, y = PC2, 
+  ggplot(aes(x = PC2, y = PC3, 
              color = Diet)) + 
   geom_point(aes(size = 8)) + 
   scale_color_manual(values = PCs$color_class, 
                      breaks = PCs$Diet) +
-  labs(x= paste("PC1 (",round(eig_val$variance.percent[1], 2),"%)", sep = ""),
-       y= paste("PC2 (",round(eig_val$variance.percent[2], 2),"%)", sep = ""))+
+  labs(x= paste("PC2 (",round(eig_val$variance.percent[2], 2),"%)", sep = ""),
+       y= paste("PC3 (",round(eig_val$variance.percent[3], 2),"%)", sep = ""))+
   guides(size = "none") 
 
 ```

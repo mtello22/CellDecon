@@ -74,6 +74,10 @@ gene_IDs <- as.data.table(na.omit(gene_IDs))
 ```
 
 
+
+
+
+
 ```{r}
 # Add column
 dDEG_PTS <- merge.data.table(x = gene_IDs, y = decon_DE, 
